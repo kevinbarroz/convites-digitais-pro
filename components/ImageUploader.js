@@ -27,7 +27,7 @@ export default function ImageUploader({
     setUploading(true)
 
     try {
-      // Converter para base64 para simplificar
+      // Converter para base64
       const reader = new FileReader()
       reader.onload = function(event) {
         const imageUrl = event.target.result
@@ -35,6 +35,12 @@ export default function ImageUploader({
         onImageSelect(imageUrl)
         setUploading(false)
       }
+      
+      reader.onerror = function(error) {
+        console.error('Erro ao ler arquivo:', error)
+        setUploading(false)
+      }
+      
       reader.readAsDataURL(file)
     } catch (error) {
       console.error('Erro ao processar imagem:', error)

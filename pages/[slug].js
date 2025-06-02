@@ -29,20 +29,13 @@ export default function ConvitePage() {
         .eq('slug', slug)
         .single();
 
-      if (error) {
-        console.error('Erro ao buscar convite:', error);
-        setError('Convite não encontrado');
-        return;
-      }
-
-      if (!data) {
+      if (error || !data) {
         setError('Convite não encontrado');
         return;
       }
 
       setConvite(data);
     } catch (err) {
-      console.error('Erro:', err);
       setError('Erro ao carregar convite');
     } finally {
       setLoading(false);
@@ -51,24 +44,57 @@ export default function ConvitePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 to-purple-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Carregando convite...</p>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#0a0a0a',
+        color: '#fff'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '3px solid rgba(255, 255, 255, 0.1)',
+            borderTop: '3px solid #667eea',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }}></div>
+          <p>Carregando convite...</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !convite) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-100 to-pink-100">
-        <div className="text-center bg-white p-8 rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Ops! 😔</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#0a0a0a',
+        color: '#fff'
+      }}>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <h1 style={{ fontSize: '3rem', marginBottom: '16px' }}>😔</h1>
+          <h2 style={{ marginBottom: '16px' }}>Ops!</h2>
+          <p style={{ marginBottom: '24px', color: 'rgba(255,255,255,0.7)' }}>
+            {error}
+          </p>
           <button 
             onClick={() => router.push('/')}
-            className="bg-purple-500 text-white px-6 py-2 rounded-lg hover:bg-purple-600 transition-colors"
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              padding: '12px 24px',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}
           >
             Voltar ao Início
           </button>
@@ -77,19 +103,20 @@ export default function ConvitePage() {
     );
   }
 
-  if (!convite) {
-    return null;
-  }
-
   return (
-    <div className="min-h-screen">
+    <div style={{ minHeight: '100vh' }}>
       {conviteAberto ? (
         <ConviteAberto convite={convite} />
       ) : (
         <ConviteFechado convite={convite} onAbrir={() => setConviteAberto(true)} />
       )}
+      
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
-
-// Removemos o getServerSideProps para evitar problemas de hidratação

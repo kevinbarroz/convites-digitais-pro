@@ -18,6 +18,7 @@ export default function ConfirmarPresencaModal({ convite, onClose }) {
     setLoading(true);
 
     try {
+      // Inserir confirmação diretamente
       const { error } = await supabase
         .from('confirmacoes')
         .insert([{
@@ -29,28 +30,55 @@ export default function ConfirmarPresencaModal({ convite, onClose }) {
       if (error) {
         console.error('Erro ao confirmar presença:', error);
         alert('Erro ao confirmar presença. Tente novamente.');
+        setLoading(false);
         return;
       }
 
-      const { error: updateError } = await supabase
-        .from('convites')
-        .update({ 
-          confirmacoes: convite.confirmacoes + 1 
-        })
-        .eq('id', convite.id);
+      // Buscar confirmações atuais e atualizar contador
+      const { count } = await supabase
+        .from('confirmacoes')
+        .select('*', { count: 'exact', head: true })
+        .eq('convite_id', convite.id);
 
-      if (updateError) {
-        console.error('Erro ao atualizar contador:', updateError);
-      }
+      // Atualizar contador no convite
+      await supabase
+        .from('convites')
+        .update({ confirmacoes: count || 0 })
+        .eq('id', convite.id);
 
       setSucesso(true);
       
-      setTimeout(() => {
+      setTimeout(async () => {
         onClose();
+        
+        // BUSCAR CONVITE ATUALIZADO DO BANCO
+        console.log('🔄 Buscando convite atualizado do banco...');
+        const { data: conviteAtualizado, error: errorBusca } = await supabase
+          .from('convites')
+          .select('*')
+          .eq('id', convite.id)
+          .single();
+        
+        if (errorBusca) {
+          console.error('Erro ao buscar convite atualizado:', errorBusca);
+          return;
+        }
+        
+        console.log('✅ Convite atualizado do banco:', conviteAtualizado);
+        console.log('🔗 redirect_url do banco:', conviteAtualizado.redirect_url);
+        
+        // Redirecionamento com dados atualizados
+        if (conviteAtualizado.redirect_url && conviteAtualizado.redirect_url.trim()) {
+          const url = conviteAtualizado.redirect_url.trim();
+          console.log('🚀 REDIRECIONANDO PARA:', url);
+          window.open(url, '_blank');
+        } else {
+          console.log('❌ URL ainda está null no banco');
+        }
       }, 2000);
 
     } catch (err) {
-      console.error('Erro:', err);
+      console.error('Erro geral:', err);
       alert('Erro ao confirmar presença. Tente novamente.');
     } finally {
       setLoading(false);
@@ -99,6 +127,16 @@ export default function ConfirmarPresencaModal({ convite, onClose }) {
           }}>
             Obrigado por confirmar sua presença. Estamos ansiosos para te ver no evento!
           </p>
+          {convite.redirect_url && (
+            <p style={{ 
+              color: 'rgba(255, 255, 255, 0.5)',
+              fontSize: '14px',
+              marginTop: '16px',
+              margin: '16px 0 0 0'
+            }}>
+              Redirecionando...
+            </p>
+          )}
         </div>
       </div>
     );

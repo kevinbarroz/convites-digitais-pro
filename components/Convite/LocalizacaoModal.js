@@ -1,6 +1,19 @@
 export default function LocalizacaoModal({ convite, onClose }) {
   const abrirGoogleMaps = () => {
-    const endereco = convite.endereco || convite.local_evento;
+    // Se tem um link direto do Google Maps, usar ele
+    if (convite.endereco && (convite.endereco.includes('maps.google.com') || convite.endereco.includes('maps.app.goo.gl'))) {
+      window.open(convite.endereco, '_blank');
+      return;
+    }
+    
+    // Se tem um link no campo localizacao_maps_url, usar ele
+    if (convite.localizacao_maps_url && (convite.localizacao_maps_url.includes('maps.google.com') || convite.localizacao_maps_url.includes('maps.app.goo.gl'))) {
+      window.open(convite.localizacao_maps_url, '_blank');
+      return;
+    }
+    
+    // Caso contrário, fazer busca pelo nome do local
+    const endereco = convite.localizacao_nome || convite.endereco || convite.local_evento;
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
     window.open(url, '_blank');
   };
@@ -120,7 +133,7 @@ export default function LocalizacaoModal({ convite, onClose }) {
               marginBottom: '12px',
               margin: '0 0 12px 0'
             }}>
-              {convite.titulo}
+              {convite.localizacao_nome || convite.endereco || convite.local_evento || 'Local do Evento'}
             </h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -148,7 +161,7 @@ export default function LocalizacaoModal({ convite, onClose }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px' }}>
-                  {convite.endereco || convite.local_evento}
+                  {convite.localizacao_nome || convite.endereco || convite.local_evento}
                 </span>
               </div>
             </div>

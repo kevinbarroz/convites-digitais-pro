@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ImageUploader from '../ImageUploader'
 
-export default function CriarConvite({ onSubmit, loading, message }) {
+export default function CriarConvite({ onSubmit, loading, message, editingConvite, onCancelEdit }) {
   const [formData, setFormData] = useState({
     nomeFesta: '',
     dataEvento: '',
@@ -16,12 +16,34 @@ export default function CriarConvite({ onSubmit, loading, message }) {
     backgroundDesktopAberto: ''
   })
 
+  // Preencher formulário quando for edição
+  useEffect(() => {
+    if (editingConvite && editingConvite.dadosParaEdicao) {
+      setFormData(editingConvite.dadosParaEdicao)
+    } else if (!editingConvite) {
+      // Limpar formulário quando não estiver editando
+      setFormData({
+        nomeFesta: '',
+        dataEvento: '',
+        horaEvento: '',
+        localizacaoNome: '',
+        localizacaoMapsUrl: '',
+        slug: '',
+        redirectUrl: '',
+        backgroundMobile: '',
+        backgroundDesktop: '',
+        backgroundMobileAberto: '',
+        backgroundDesktopAberto: ''
+      })
+    }
+  }, [editingConvite])
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
     
-    // Auto-gerar slug baseado no nome da festa
-    if (name === 'nomeFesta') {
+    // Auto-gerar slug baseado no nome da festa (apenas se não for edição)
+    if (name === 'nomeFesta' && !editingConvite) {
       const slug = value
         .toLowerCase()
         .normalize('NFD')
@@ -33,12 +55,21 @@ export default function CriarConvite({ onSubmit, loading, message }) {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    onSubmit(formData)
     
-    // Limpar formulário após sucesso
-    if (!loading) {
+    // Validação
+    if (!formData.nomeFesta || !formData.dataEvento || !formData.horaEvento || 
+        !formData.localizacaoNome || !formData.slug) {
+      alert('Preencha todos os campos obrigatórios')
+      return
+    }
+    
+    // Enviar dados
+    await onSubmit(formData)
+    
+    // Limpar formulário após sucesso (apenas se não for edição)
+    if (!loading && !editingConvite) {
       setFormData({
         nomeFesta: '',
         dataEvento: '',
@@ -55,11 +86,26 @@ export default function CriarConvite({ onSubmit, loading, message }) {
     }
   }
 
+  const isEditing = !!editingConvite
+
   return (
     <div>
-      <h2 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '32px' }}>
-        Criar Novo Convite
+      <h2 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '32px', color: '#fff' }}>
+        {isEditing ? '✏️ Editar Convite' : 'Criar Novo Convite'}
       </h2>
+
+      {message.text && (
+        <div style={{
+          background: message.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+          color: message.type === 'success' ? '#22c55e' : '#ef4444',
+          border: `1px solid ${message.type === 'success' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '24px'
+        }}>
+          {message.text}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} style={{
         background: 'rgba(255, 255, 255, 0.05)',
@@ -121,18 +167,20 @@ export default function CriarConvite({ onSubmit, loading, message }) {
               onChange={handleInputChange}
               placeholder="ana-maria"
               required
+              disabled={isEditing} // Não permitir alterar slug na edição
               style={{
                 width: '100%',
                 padding: '16px',
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: isEditing ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px',
-                color: '#fff',
+                color: isEditing ? 'rgba(255, 255, 255, 0.5)' : '#fff',
                 fontSize: '16px'
               }}
             />
             <small style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
               URL: /{formData.slug}
+              {isEditing && <span style={{ color: '#f59e0b' }}> (não pode ser alterado)</span>}
             </small>
           </div>
         </div>
@@ -272,7 +320,7 @@ export default function CriarConvite({ onSubmit, loading, message }) {
             name="redirectUrl"
             value={formData.redirectUrl}
             onChange={handleInputChange}
-            placeholder="https://wa.me/5511999999999?text=Confirmei presença!"
+            placeholder="https://wa.me/5543996284678?text=Confirmei presença!"
             style={{
               width: '100%',
               padding: '16px',
@@ -283,6 +331,9 @@ export default function CriarConvite({ onSubmit, loading, message }) {
               fontSize: '16px'
             }}
           />
+          <small style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+            Esta URL será aberta após confirmar presença no evento
+          </small>
         </div>
 
         {/* Seção de Upload de Imagens */}
@@ -331,23 +382,51 @@ export default function CriarConvite({ onSubmit, loading, message }) {
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            background: loading ? 'rgba(102, 126, 234, 0.5)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            border: 'none',
-            color: '#fff',
-            padding: '16px 32px',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s'
-          }}
-        >
-          {loading ? 'Criando...' : '🎉 Criar Convite'}
-        </button>
+        {/* Botões */}
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              flex: 1,
+              background: loading ? 'rgba(102, 126, 234, 0.5)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border: 'none',
+              color: '#fff',
+              padding: '16px 32px',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            {loading 
+              ? (isEditing ? 'Salvando...' : 'Criando...') 
+              : (isEditing ? '💾 Salvar Alterações' : '🎉 Criar Convite')
+            }
+          </button>
+          
+          {isEditing && onCancelEdit && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              disabled={loading}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#fff',
+                padding: '16px 24px',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: 500,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              ❌ Cancelar Edição
+            </button>
+          )}
+        </div>
       </form>
     </div>
   )

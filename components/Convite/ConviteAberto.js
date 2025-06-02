@@ -8,10 +8,7 @@ export default function ConviteAberto({ convite }) {
   const [showLocalizacaoModal, setShowLocalizacaoModal] = useState(false);
   
   useEffect(() => {
-    // Adicionar classe no body para evitar scroll
     document.body.classList.add('convite-page');
-    
-    // Incrementar visualizações
     incrementarVisualizacoes();
     
     return () => {
@@ -42,9 +39,7 @@ export default function ConviteAberto({ convite }) {
 
   // Função para converter base64 em blob URL
   const convertBase64ToUrl = (base64String) => {
-    if (!base64String || !base64String.startsWith('data:image')) {
-      return null;
-    }
+    if (!base64String || !base64String.startsWith('data:image')) return null;
     
     try {
       const byteCharacters = atob(base64String.split(',')[1]);
@@ -61,21 +56,20 @@ export default function ConviteAberto({ convite }) {
     }
   };
 
-  // DETECÇÃO MELHORADA DE MOBILE
-  const isMobile = typeof window !== 'undefined' && (
-    window.innerWidth <= 768 || 
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-  );
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   
-  // Primeiro tentar mobile, se não tiver usar desktop como fallback
   let base64Image = null;
   
   if (isMobile) {
-    base64Image = convite.background_mobile_aberto_url || convite.background_desktop_aberto_url;
-    console.log('🔥 CONVITE ABERTO MOBILE - Usando background_mobile_aberto_url');
+    base64Image = convite.background_mobile_aberto_url || 
+                  convite.background_mobile_url ||
+                  convite.background_desktop_aberto_url ||
+                  convite.background_desktop_url;
   } else {
-    base64Image = convite.background_desktop_aberto_url || convite.background_mobile_aberto_url;
-    console.log('💻 CONVITE ABERTO DESKTOP - Usando background_desktop_aberto_url');
+    base64Image = convite.background_desktop_aberto_url || 
+                  convite.background_desktop_url ||
+                  convite.background_mobile_aberto_url ||
+                  convite.background_mobile_url;
   }
   
   const backgroundImage = convertBase64ToUrl(base64Image);
@@ -86,10 +80,19 @@ export default function ConviteAberto({ convite }) {
       style={{
         backgroundImage: backgroundImage 
           ? `url(${backgroundImage})` 
-          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        minHeight: '100vh',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        position: 'relative'
       }}
     >
-      <div className="convite-overlay"></div>
+      <div className="convite-overlay" style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'rgba(0, 0, 0, 0.2)'
+      }}></div>
       
       <button
         onClick={irParaHome}
@@ -111,19 +114,23 @@ export default function ConviteAberto({ convite }) {
           zIndex: 30,
           boxShadow: 'none'
         }}
-        onMouseEnter={(e) => {
-          e.target.style.background = 'rgba(30, 30, 30, 0.9)';
-          e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.background = 'rgba(20, 20, 20, 0.8)';
-          e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-        }}
       >
         Faça seu Convite Digital
       </button>
 
-      <div className="btn-grid">
+      <div style={{
+        position: 'fixed',
+        bottom: '60px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '16px',
+        width: '100%',
+        maxWidth: '400px',
+        padding: '0 24px',
+        zIndex: 10
+      }}>
         <button
           onClick={() => setShowConfirmarModal(true)}
           style={{
@@ -139,14 +146,6 @@ export default function ConviteAberto({ convite }) {
             transition: 'all 0.2s ease',
             boxShadow: 'none',
             fontSize: '14px'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = 'rgba(30, 30, 30, 0.9)';
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'rgba(20, 20, 20, 0.8)';
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
           }}
         >
           Confirmar Presença
@@ -167,14 +166,6 @@ export default function ConviteAberto({ convite }) {
             transition: 'all 0.2s ease',
             boxShadow: 'none',
             fontSize: '14px'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = 'rgba(30, 30, 30, 0.9)';
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'rgba(20, 20, 20, 0.8)';
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
           }}
         >
           Localização

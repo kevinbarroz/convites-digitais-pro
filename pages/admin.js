@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
-import { supabase } from '../lib/supabase'
+import { supabase, criarConvite, editarConvite, excluirConvite } from '../lib/supabase'
 import Dashboard from '../components/Admin/Dashboard'
 import CriarConvite from '../components/Admin/CriarConvite'
 import ConvitesCriados from '../components/Admin/ConvitesCriados'
@@ -19,6 +19,7 @@ export default function Admin() {
   const [message, setMessage] = useState({ type: '', text: '' })
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [editingConvite, setEditingConvite] = useState(null)
 
   useEffect(() => {
     checkAuthentication()
@@ -114,6 +115,7 @@ export default function Admin() {
     setTimeout(() => setMessage({ type: '', text: '' }), 5000)
   }
 
+  // Criar convite
   const handleCreateConvite = async (formData) => {
     if (!formData.nomeFesta || !formData.dataEvento || !formData.horaEvento || 
         !formData.localizacaoNome || !formData.slug) {
@@ -123,32 +125,86 @@ export default function Admin() {
 
     setLoading(true)
     try {
-      // Combinar data e hora
-      const dataHora = `${formData.dataEvento}T${formData.horaEvento}:00`
-
-      const { data, error } = await supabase
-        .from('convites')
-        .insert([{
-          titulo: formData.nomeFesta,
-          data_evento: dataHora,
-          local_evento: formData.localizacaoNome,
-          endereco: formData.localizacaoMapsUrl,
-          slug: formData.slug,
-          background_mobile_url: formData.backgroundMobile,
-          background_desktop_url: formData.backgroundDesktop,
-          background_mobile_aberto_url: formData.backgroundMobileAberto,
-          background_desktop_aberto_url: formData.backgroundDesktopAberto
-        }])
-
-      if (error) throw error
-
+      const resultado = await criarConvite(formData)
       showMessage('success', 'Convite criado com sucesso!')
+      
+      // Recarregar dados
       loadConvites()
       loadStats()
     } catch (error) {
+      console.error('Erro ao criar convite:', error)
       showMessage('error', 'Erro ao criar convite: ' + error.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Editar convite
+  const handleEditConvite = (convite) => {
+    // Preparar dados do convite para edição
+    const dadosParaEdicao = {
+      nomeFesta: convite.nome_festa,
+      dataEvento: convite.data_evento ? convite.data_evento.split('T')[0] : '',
+      horaEvento: convite.hora_evento || '',
+      localizacaoNome: convite.localizacao_nome || '',
+      localizacaoMapsUrl: convite.endereco || '',
+      slug: convite.slug,
+      redirectUrl: convite.redirect_url || '',
+      backgroundMobile: convite.background_mobile_url || '',
+      backgroundDesktop: convite.background_desktop_url || '',
+      backgroundMobileAberto: convite.background_mobile_aberto_url || '',
+      backgroundDesktopAberto: convite.background_desktop_aberto_url || ''
+    }
+    
+    setEditingConvite({ ...convite, dadosParaEdicao })
+    setActiveTab('criar') // Mudar para a aba de criação para editar
+  }
+
+  // Salvar edição do convite
+  const handleSaveEdit = async (formData) => {
+    if (!editingConvite) return
+
+    if (!formData.nomeFesta || !formData.dataEvento || !formData.horaEvento || 
+        !formData.localizacaoNome || !formData.slug) {
+      showMessage('error', 'Preencha todos os campos obrigatórios')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await editarConvite(editingConvite.id, formData)
+      showMessage('success', 'Convite atualizado com sucesso!')
+      
+      // Limpar edição e recarregar dados
+      setEditingConvite(null)
+      loadConvites()
+      loadStats()
+    } catch (error) {
+      console.error('Erro ao editar convite:', error)
+      showMessage('error', 'Erro ao editar convite: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Cancelar edição
+  const handleCancelEdit = () => {
+    setEditingConvite(null)
+    setActiveTab('convites') // Voltar para a lista de convites
+  }
+
+  // Excluir convite
+  const handleDeleteConvite = async (conviteId) => {
+    try {
+      await excluirConvite(conviteId)
+      showMessage('success', 'Convite excluído com sucesso! Analytics preservados no histórico.')
+      
+      // Recarregar dados
+      loadConvites()
+      loadStats()
+    } catch (error) {
+      console.error('Erro ao excluir convite:', error)
+      showMessage('error', 'Erro ao excluir convite: ' + error.message)
     }
   }
 
@@ -157,9 +213,23 @@ export default function Admin() {
       case 'dashboard':
         return <Dashboard stats={stats} />
       case 'criar':
-        return <CriarConvite onSubmit={handleCreateConvite} loading={loading} message={message} />
+        return (
+          <CriarConvite 
+            onSubmit={editingConvite ? handleSaveEdit : handleCreateConvite}
+            loading={loading} 
+            message={message}
+            editingConvite={editingConvite}
+            onCancelEdit={handleCancelEdit}
+          />
+        )
       case 'convites':
-        return <ConvitesCriados convites={convites} />
+        return (
+          <ConvitesCriados 
+            convites={convites}
+            onEdit={handleEditConvite}
+            onDelete={handleDeleteConvite}
+          />
+        )
       case 'dados':
         return <DadosConvites />
       default:
@@ -255,13 +325,22 @@ export default function Admin() {
           }}>
             {[
               { id: 'dashboard', label: '📊 Dashboard' },
-              { id: 'criar', label: '➕ Criar Convite' },
+              { 
+                id: 'criar', 
+                label: editingConvite ? '✏️ Editar Convite' : '➕ Criar Convite' 
+              },
               { id: 'convites', label: '📋 Convites Criados' },
               { id: 'dados', label: '📈 Dados dos Convites' }
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  if (tab.id !== 'criar' && editingConvite) {
+                    // Se mudou de aba durante edição, cancelar edição
+                    setEditingConvite(null)
+                  }
+                  setActiveTab(tab.id)
+                }}
                 style={{
                   width: '100%',
                   padding: '16px 24px',
@@ -294,6 +373,39 @@ export default function Admin() {
                 marginBottom: '24px'
               }}>
                 {message.text}
+              </div>
+            )}
+
+            {/* Indicador de edição */}
+            {editingConvite && (
+              <div style={{
+                background: 'rgba(168, 85, 247, 0.1)',
+                color: '#a855f7',
+                border: '1px solid rgba(168, 85, 247, 0.2)',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '24px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <strong>✏️ Editando convite:</strong> {editingConvite.nome_festa}
+                </div>
+                <button
+                  onClick={handleCancelEdit}
+                  style={{
+                    background: 'rgba(168, 85, 247, 0.2)',
+                    border: '1px solid rgba(168, 85, 247, 0.3)',
+                    color: '#a855f7',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar Edição
+                </button>
               </div>
             )}
 
